@@ -323,12 +323,12 @@ func IsNull(str string) bool {
 
 // HasWhitespaceOnly checks the string only contains whitespace
 func HasWhitespaceOnly(str string) bool {
-    return len(str) > 0 && rxHasWhitespaceOnly.MatchString(str)
+	return len(str) > 0 && rxHasWhitespaceOnly.MatchString(str)
 }
 
 // HasWhitespace checks if the string contains any whitespace
 func HasWhitespace(str string) bool {
-    return len(str) > 0 && rxHasWhitespace.MatchString(str)
+	return len(str) > 0 && rxHasWhitespace.MatchString(str)
 }
 
 // IsByteLength check if the string's length (in bytes) falls in a range.
@@ -1014,7 +1014,7 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value, options 
 		options = parseTagIntoMap(tag)
 	}
 
-	if isEmptyValue(v) {
+	if !isFieldSet(v) {
 		// an empty value is not validated, check only required
 		isValid, resultErr = checkRequired(v, t, options)
 		for key := range options {
@@ -1121,10 +1121,10 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value, options 
 				delete(options, validatorSpec)
 
 				switch v.Kind() {
-                case reflect.String,
-                    reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-                    reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-                    reflect.Float32, reflect.Float64:
+				case reflect.String,
+					reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+					reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+					reflect.Float32, reflect.Float64:
 					field := fmt.Sprint(v) // make value into string, then validate with regex
 					if result := validatefunc(field); !result && !negate || result && negate {
 						if customMsgExists {
@@ -1212,25 +1212,14 @@ func stripParams(validatorString string) string {
 	return paramsRegexp.ReplaceAllString(validatorString, "")
 }
 
-func isEmptyValue(v reflect.Value) bool {
+// isFieldSet returns false for nil pointers, interfaces, maps, and slices. For all other values, it returns true.
+func isFieldSet(v reflect.Value) bool {
 	switch v.Kind() {
-	case reflect.String, reflect.Array:
-		return v.Len() == 0
-	case reflect.Map, reflect.Slice:
-		return v.Len() == 0 || v.IsNil()
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
+	case reflect.Map, reflect.Slice, reflect.Interface, reflect.Ptr:
+		return !v.IsNil()
 	}
 
-	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+	return true
 }
 
 // ErrorByField returns error for specified field of the struct
